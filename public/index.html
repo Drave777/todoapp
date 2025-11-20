@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>To-Do List con Cronologia</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Font Awesome per le icone -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+
+  <style>
+    body {
+      background-color: #f5f9ff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: #2c3e50;
+    }
+
+    h1, h3 {
+      color: #34495e;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    h3 {
+      margin-top: 50px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 5px;
+    }
+
+    .input-group {
+      background-color: #ffffff;
+      padding: 12px;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    #todoInput {
+      border-radius: 15px 0 0 15px;
+      border: 1px solid #ddd;
+      padding-left: 15px;
+      font-size: 1.1rem;
+      height: 46px;
+    }
+
+    #addBtn {
+      border-radius: 0 15px 15px 0;
+      font-weight: bold;
+      font-size: 1.1rem;
+      background-color: #3498db;
+      border: none;
+      color: white;
+      transition: background-color 0.3s ease;
+      height: 46px;
+      width: 120px;
+    }
+
+    #addBtn:hover {
+      background-color: #2980b9;
+    }
+
+    ul {
+      padding-left: 0;
+      list-style-type: none;
+    }
+
+    .list-group-item {
+      background-color: #eaf4fc;
+      border: none;
+      margin-bottom: 15px;
+      border-radius: 12px;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      transition: background-color 0.3s ease;
+    }
+
+    .list-group-item:hover {
+      background-color: #d5e6fb;
+    }
+
+    .list-group-item.completed {
+      background-color: #b1d4e8;
+      text-decoration: line-through;
+      color: #34495e;
+      font-style: italic;
+    }
+
+    .todo-text {
+      flex-grow: 1;
+      cursor: pointer;
+      font-size: 1.2rem;
+      user-select: none;
+      margin-left: 15px;
+    }
+
+    /* Icone pulsanti */
+    .btn-icon {
+      font-size: 1.2rem;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: #e74c3c;
+      transition: color 0.3s ease;
+      padding: 4px;
+    }
+
+    .btn-icon:hover {
+      color: #c0392b;
+    }
+
+    .btn-complete {
+      color: #27ae60;
+      margin-left: 5px;
+    }
+
+    .btn-complete:hover {
+      color: #1e8449;
+    }
+  </style>
+</head>
+<body>
+  <h1>To-Do List</h1>
+
+  <div class="input-group">
+    <input type="text" id="todoInput" placeholder="Cosa vuoi fare?" autocomplete="off" />
+    <button id="addBtn">Aggiungi</button>
+  </div>
+
+  <ul id="todoList" class="list-group mt-4"></ul>
+
+  <h3>Cronologia attività completate</h3>
+  <ul id="completedList" class="list-group"></ul>
+
+  <script>
+    const todoInput = document.getElementById('todoInput');
+    const addBtn = document.getElementById('addBtn');
+    const todoList = document.getElementById('todoList');
+    const completedList = document.getElementById('completedList');
+
+    async function fetchTodos() {
+      const response = await fetch('/todos');
+      return await response.json();
+    }
+
+    async function addTodo(text) {
+      const response = await fetch('/todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      return await response.json();
+    }
+
+    async function updateTodo(id, updates) {
+      const response = await fetch(`/todos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      return await response.json();
+    }
+
+    async function deleteTodo(id) {
+      await fetch(`/todos/${id}`, { method: 'DELETE' });
+    }
+
+    function renderTodos(todos) {
+      todoList.innerHTML = '';
+      completedList.innerHTML = '';
+
+      const activeTodos = todos.filter(todo => !todo.completed);
+      const completedTodos = todos.filter(todo => todo.completed);
+
+      activeTodos.forEach(todo => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+        li.innerHTML = `
+          <button class="btn-icon btn-complete" title="Completa">
+            <i class="fa-solid fa-check-double"></i>
+          </button>
+          <span class="todo-text">${todo.text}</span>
+          <button class="btn-icon btn-delete" title="Elimina">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        `;
+
+        li.querySelector('.todo-text').onclick = () => toggleCompleted(todo.id);
+        li.querySelector('.btn-complete').onclick = () => toggleCompleted(todo.id);
+        li.querySelector('.btn-delete').onclick = () => deleteTodoItem(todo.id);
+
+        todoList.appendChild(li);
+      });
+
+      completedTodos.forEach(todo => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center completed';
+
+        li.innerHTML = `
+          <span class="todo-text">${todo.text}</span>
+          <button class="btn-icon btn-delete" title="Elimina">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        `;
+
+        li.querySelector('.btn-delete').onclick = () => deleteTodoItem(todo.id);
+
+        completedList.appendChild(li);
+      });
+    }
+
+    let todos = [];
+
+    async function toggleCompleted(id) {
+      const todo = todos.find(t => t.id === id);
+      if (todo) {
+        const updated = await updateTodo(id, { completed: !todo.completed });
+        todos = todos.map(t => (t.id === id ? updated : t));
+        renderTodos(todos);
+      }
+    }
+
+    async function deleteTodoItem(id) {
+      await deleteTodo(id);
+      todos = todos.filter(t => t.id !== id);
+      renderTodos(todos);
+    }
+
+    addBtn.onclick = async () => {
+      const text = todoInput.value.trim();
+      if (text) {
+        const newTodo = await addTodo(text);
+        todos.push(newTodo);
+        todoInput.value = '';
+        renderTodos(todos);
+      }
+    };
+
+    window.onload = async () => {
+      todos = await fetchTodos();
+      renderTodos(todos);
+    };
+  </script>
+
+  <!-- Bootstrap JS Bundle (opzionale) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
